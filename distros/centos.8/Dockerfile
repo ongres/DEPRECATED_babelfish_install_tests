@@ -1,8 +1,8 @@
-FROM fedora:36
+FROM centos:centos8
 
 RUN dnf install -y gcc gcc-c++ kernel-devel make
 RUN dnf install -y bison flex libxml2-devel readline-devel zlib-devel
-RUN dnf install -y uuid-devel pkg-config openssl-devel
+RUN dnf --enablerepo=powertools install -y uuid-devel pkg-config openssl-devel
 RUN dnf install -y libicu-devel postgresql-devel perl
 
 RUN mkdir /code
