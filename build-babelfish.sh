@@ -1,6 +1,7 @@
 #!/bin/sh
 
 build_docker(){
+  python dockerfile-templater.py "$1"
   docker build \
     -t "babelfish:$1" \
     -f "distros/$1/Dockerfile" \

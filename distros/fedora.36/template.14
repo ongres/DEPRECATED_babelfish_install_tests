@@ -1,3 +1,0 @@
-#!/bin/sh
-sudo chown -R postgres:postgres $INSTALLATION_PATH
-sudo chown -R postgres:postgres /usr/local/pgsql/data

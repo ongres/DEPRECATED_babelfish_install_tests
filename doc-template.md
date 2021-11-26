@@ -59,7 +59,7 @@ If you happen to use Debian or Ubuntu, you might want to use the following
 commands to install dependencies:
 
 ``` sh
-{{ template.1 }}
+{{ core-prerequisites }}
 ```
 
 ## Compiling the code 
@@ -69,7 +69,7 @@ build. To do that we need to run the `configure` script in the directory where y
 have downloaded the Babelfish for PostgreSQL engine sources:
 
 ``` sh
-{{ template.2 }}
+{{ default-configure }}
 ``` 
 
 The above would configure the installation path under `/usr/local/pgsql`; if
@@ -78,7 +78,7 @@ Therefore, if you want to change the path to `/usr/local/pgsql-13.4`, you can
 run the configure script as follows.
 
  ``` sh
- {{ template.3 }}
+{{ preffix-configure }}
  ```
 
 #### Building Babelfish for PostgreSQL engine
@@ -87,7 +87,7 @@ Now that we have configured the source tree, is important to configure the insta
 
 ``` sh
 INSTALLATION_PATH=<the path you specified as prefix>
-{{ template.4 }}
+{{ installation-path }}
 ```
 
 To avoid installation errors, you should own the installation directory. You can can change the 
@@ -101,13 +101,13 @@ For example, if your installation path is `/usr/local/pgsql-13.4` and your user 
  the command should be as follows:
 
 ``` sh
-{{ template.5 }}
+{{ own-installation }}
 ```
 
 Now we can build Babelfish with the following commands:
 
 ``` sh
-{{ template.6 }}
+{{ compile-core }}
 ```
 
 #### Building Babelfish Extensions
@@ -125,7 +125,7 @@ In order to build the extensions we would need to install some additional tools:
 You can install most of these tools by running the command:
 
 ``` sh
-{{ template.7 }}
+{{ extension-prerequisites }}
 ```
 
 ##### Installing Antlr4 runtime
@@ -138,11 +138,11 @@ this .jar in the path `/contrib/babelfishpg_tsql/antlr/thirdparty/antlr`.
 Keeping this in mind, we can install Antlr4 runtime by running:
 
 ``` sh
-{{ template.8 }}
+{{ antlr-download }}
 
 EXTENSIONS_SOURCE_CODE_PATH="<the patch in which you downloaded the Babelfish extensions source code>"
 
-{{ template.9 }}
+{{ compile-antlr }}
 ```
 
 Now that we have the antlr4 runtime installed, we need to copy the
@@ -150,9 +150,8 @@ Now that we have the antlr4 runtime installed, we need to copy the
 engine libs folder. We can do that by running the following command:
 
 ``` sh
-{{ template.10 }}
+{{ copy-antlr-runtime }}
 ```
-
 
 # Build and install the extensions
 
@@ -183,7 +182,7 @@ contrib folder in the Babelfish extension source code, and then build the
 extensions one by one. We do it with the following script:
 
 ``` sh
-{{ template.11 }}
+{{ compile-extensions }}
 ```
 
 Once all extensions have been compiled you can start PostgreSQL manually.
@@ -198,25 +197,25 @@ Let's first, create the data directory, in this example we will use `/usr/local/
  folder. 
 
 ``` sh
-{{ template.12 }}
+{{ data-path }}
 ```
 
 Now, let's create a postgres user
 
 ``` sh
-{{ template.13 }}
+{{ add-postgres-user }}
 ```
 
 With the created user, we can change the ownership the of the Babelfish binaries, and the data directory.
 
 ``` sh
-{{ template.14 }}
+{{ own-postgres-installation }}
 ```
 
 Now we can use the created postgres user to initialize the database directory.
 
 ``` sh
-{{ template.15 }}
+{{ init-database }}
 ```
 
 Once the data directory has been initialized, we need to change the postgresql.conf file, by uncommenting and setting the following properties:
@@ -228,5 +227,5 @@ shared_preload_libraries = 'babelfishpg_tds'
 
 Now you can start Babelfish by running the command:
 ``` sh
-{{ template.16 }}
+{{ start-database }}
 ```
