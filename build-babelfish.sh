@@ -1,4 +1,22 @@
 #!/bin/sh
+TEST_QUICK_INSTALL=${TEST_QUICK_INSTALL:-false}
+parse_commandline() {
+  while test $# -gt 0
+  do
+    key="$1"
+        case "$key" in
+          --test-quick-install)
+            TEST_QUICK_INSTALL="true"
+                shift
+        exit 0
+          ;;
+          *)
+           die "Got an unexpected argument: $1"
+          ;;
+    esac
+        shift
+  done
+}
 
 build_docker(){
   python dockerfile-templater.py "$1"
@@ -75,6 +93,8 @@ run_quickstart_container(){
   docker run --rm --name babelfish "babelfish:$DISTRO"
 }
 
+parse_commandline "$@"
+
 cat << EOF > report.md
 ## Babelfish Docker images builed 
 | Distro | Status |
@@ -94,16 +114,24 @@ do
     echo "Testing extension creation for $distro"
     if test_create_extension "$distro" > "output/$distro/$distro.out" 2>&1
     then 
-      generate_quickinstall_script "$distro"
-      build_quickstart_container "$distro" > /dev/null 2>&1
-      echo "Testing quick install script for $distro"
-      if run_quickstart_container "$distro" > "output/$distro/$distro.out" 2>&1
-      then 
+      if [ "$TEST_QUICK_INSTALL" = "true" ]
+      then
+       
+        generate_quickinstall_script "$distro"
+        build_quickstart_container "$distro" > /dev/null 2>&1
+        echo "Testing quick install script for $distro"
+        if run_quickstart_container "$distro" > "output/$distro/$distro.out" 2>&1
+        then 
+          add_to_report "$distro" "OK"
+          echo "Generating installation documentation for $distro"
+          python doc-templater.py "$distro"
+        else
+          add_to_report "$distro" "QUICK INSTALL FAILED"
+        fi  
+      else 
         add_to_report "$distro" "OK"
         echo "Generating installation documentation for $distro"
         python doc-templater.py "$distro"
-      else
-        add_to_report "$distro" "QUICK INSTALL FAILED"
       fi      
     else
       add_to_report "$distro" "CREATE EXTENSION FAILED"
