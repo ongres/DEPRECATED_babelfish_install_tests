@@ -57,7 +57,7 @@ def parse_document_template(steps):
     return parsed_document
 
 def write_document(distro, document_output):
-    output_file_format = "compiling-babelfish-from-source.{distro}.md"
+    output_file_format = "output/{distro}/compiling-babelfish-from-source.md"
     with open(output_file_format.format(distro = distro), 'w') as output_file:
         output_file.writelines(document_output)
   

@@ -1,19 +1,18 @@
 #!/bin/sh
 
-export BABELFISH_CODE_USER="babelfish-compiler"
-export BABELFISH_CODE_PATH="/opt/babelfish-code"
-export INSTALLATION_PATH=/usr/local/pgsql-13.4
+export BABELFISH_CODE_USER="${BABELFISH_CODE_USER:-babelfish-compiler}"
+export BABELFISH_CODE_PATH="${BABELFISH_CODE_PATH:-/opt/babelfish-code}"
+export BABELFISH_INSTALLATION_PATH="${BABELFISH_INSTALLATION_PATH:-/usr/local/pgsql-13.4}"
+export BABELFISH_DATA_PATH=/usr/local/pgsql/data
 export PG_SRC="$BABELFISH_CODE_PATH/postgresql_modified_for_babelfish"
 export EXTENSIONS_SOURCE_CODE_PATH="$BABELFISH_CODE_PATH/babelfish_extensions"
-export PG_CONFIG="$INSTALLATION_PATH/bin/pg_config"
+export PG_CONFIG="$BABELFISH_INSTALLATION_PATH/bin/pg_config"
 export cmake=/usr/bin/cmake
 
 if ! id "$BABELFISH_CODE_USER" > /dev/null
 then
   useradd "$BABELFISH_CODE_USER" 
 fi
-
-dnf install -y unzip wget
 
 mkdir -p "$BABELFISH_CODE_PATH"
 
@@ -42,23 +41,18 @@ rm BABEL_1_X_DEV.zip
 
 chown -R "$BABELFISH_CODE_USER:$BABELFISH_CODE_USER" "$EXTENSIONS_SOURCE_CODE_PATH"
 
-dnf install -y gcc gcc-c++ kernel-devel make
-dnf install -y bison flex libxml2-devel readline-devel zlib-devel
-dnf --enablerepo=powertools install -y uuid-devel pkg-config openssl-devel
-dnf install -y libicu-devel postgresql-devel perl
-
 cd "$PG_SRC" || exit 1
 runuser -u "$BABELFISH_CODE_USER" -- ./configure CFLAGS="-ggdb" \
-  --prefix="$INSTALLATION_PATH" \
+  --prefix="$BABELFISH_INSTALLATION_PATH" \
   --enable-debug \
   --with-libxml \
   --with-uuid=ossp \
   --with-icu \
   --with-extra-version=" Babelfish for PostgreSQL"
 
-mkdir -p "$INSTALLATION_PATH"
+mkdir -p "$BABELFISH_INSTALLATION_PATH"
 
-chown -R "$BABELFISH_CODE_USER:$BABELFISH_CODE_USER" "$INSTALLATION_PATH"
+chown -R "$BABELFISH_CODE_USER:$BABELFISH_CODE_USER" "$BABELFISH_INSTALLATION_PATH"
 
 #Compilining babelfish engine
 cd "$BABELFISH_CODE_PATH/postgresql_modified_for_babelfish" || exit 1
@@ -73,9 +67,6 @@ runuser -u "$BABELFISH_CODE_USER" make install # Installs the Babelfish for Post
 cd "$BABELFISH_CODE_PATH/postgresql_modified_for_babelfish/contrib" || exit 1
 
 runuser -u "$BABELFISH_CODE_USER" make install # Installs the PostgreSQL default extensions
-
-dnf install -y java unzip curl git
-dnf install -y cmake libuuid-devel
 
 # Dowloads the compressed Antlr4 Runtime sources on /opt/antlr4-cpp-runtime-4.9.2-source.zip 
 curl https://www.antlr.org/download/antlr4-cpp-runtime-4.9.2-source.zip \
@@ -94,7 +85,7 @@ cmake .. -DANTLR_JAR_LOCATION="$EXTENSIONS_SOURCE_CODE_PATH/contrib/babelfishpg_
 make
 make install
 
-cp /usr/local/lib/libantlr4-runtime.so.4.9.2 "$INSTALLATION_PATH/lib"
+cp /usr/local/lib/libantlr4-runtime.so.4.9.2 "$BABELFISH_INSTALLATION_PATH/lib"
 
 # Install babelfishpg_money extension
 cd "$EXTENSIONS_SOURCE_CODE_PATH/contrib/babelfishpg_money" || exit 1
@@ -116,19 +107,18 @@ cd "$EXTENSIONS_SOURCE_CODE_PATH/contrib/babelfishpg_tsql" || exit 1
 runuser -u "$BABELFISH_CODE_USER" -- make
 runuser -u "$BABELFISH_CODE_USER" -- make install
 
-mkdir -p /usr/local/pgsql/data
+mkdir -p "$BABELFISH_DATA_PATH"
 
 useradd postgres
 
-chown -R postgres:postgres "$INSTALLATION_PATH"
-chown -R postgres:postgres /usr/local/pgsql/data
+chown -R postgres:postgres "$BABELFISH_INSTALLATION_PATH"
+chown -R postgres:postgres "$BABELFISH_DATA_PATH"
 
-runuser -u "postgres" -- "$INSTALLATION_PATH/bin/initdb" -D /usr/local/pgsql/data
+runuser -u "postgres" -- "$BABELFISH_INSTALLATION_PATH/bin/initdb" -D "$BABELFISH_DATA_PATH"
 
+echo "listen_addresses = '*'" >> "$BABELFISH_DATA_PATH/postgresql.conf"
+echo "shared_preload_libraries = 'babelfishpg_tds'" >> "$BABELFISH_DATA_PATH/postgresql.conf"
 
-echo "listen_addresses = '*'" >> /usr/local/pgsql/data/postgresql.conf
-echo "shared_preload_libraries = 'babelfishpg_tds'" >> /usr/local/pgsql/data/postgresql.conf
+cd "$BABELFISH_INSTALLATION_PATH" || exit 1
 
-cd "$INSTALLATION_PATH" || exit 1
-
-runuser -u "postgres" -- "$INSTALLATION_PATH/bin/pg_ctl" -D /usr/local/pgsql/data start
+runuser -u "postgres" -- "$BABELFISH_INSTALLATION_PATH/bin/pg_ctl" -D "$BABELFISH_DATA_PATH" start

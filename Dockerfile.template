@@ -62,4 +62,4 @@ EXPOSE 1433
 
 WORKDIR /usr/local/pgsql-13.4/
 
-{{ start-database }}
+ENTRYPOINT ["/usr/local/pgsql-13.4/bin/postgres", "-D", "/usr/local/pgsql/data"]
