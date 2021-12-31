@@ -4,17 +4,16 @@ parse_commandline() {
   while test $# -gt 0
   do
     key="$1"
-        case "$key" in
-          --test-quick-install)
-            TEST_QUICK_INSTALL="true"
-                shift
-        exit 0
-          ;;
-          *)
-           die "Got an unexpected argument: $1"
-          ;;
+    case "$key" in
+      --test-quick-install)
+         echo "--test-quick-install detected, quick install scripts will be tested"
+         TEST_QUICK_INSTALL="true"
+         shift
+      ;;        
+      *)
+        die "Got an unexpected argument: $1"
+      ;;
     esac
-        shift
   done
 }
 
@@ -58,11 +57,20 @@ run_in_babelfish_container(){
   fi
 }
 
+get_distro_id(){
+  DISTRO=$1
+  BASE_CONTAINER=$(echo "$DISTRO" | sed -e 's/\./:/ ')
+
+  ID=$(docker run --rm --name "$distro" "$BASE_CONTAINER" grep "^ID=" /etc/os-release | cut -d "=" -f 2 | sed -e 's/^"//' -e 's/"$//')
+  VERSION=$(docker run --rm --name "$distro" "$BASE_CONTAINER" grep "^VERSION_ID=" /etc/os-release | cut -d "=" -f 2 | sed -e 's/^"//' -e 's/"$//')
+  echo "$ID.$VERSION"
+}
+
 generate_quickinstall_script(){
   DISTRO=$1
-  mkdir "output/${DISTRO}/quickinstall"
-  python quick-start-templater.py "$DISTRO"
-  cp quick-install.sh "output/${DISTRO}/quickinstall.sh"
+  DISTRO_ID=$2
+  python quick-start-templater.py "$DISTRO" "$DISTRO_ID"
+  cp quick-install.sh "output/quickinstall/install.sh"
 }
 
 build_quickstart_container(){
@@ -70,19 +78,14 @@ build_quickstart_container(){
   BASE_CONTAINER=$(echo "$DISTRO" | sed -e 's/\./:/ ')
   rm -rf tmp
   mkdir tmp
-  cat << EOF > tmp/entrypoint.sh
-#!/bin/sh
-sh prerequisites.sh
-sh install.sh
-EOF
+  
   cat << EOF > tmp/Dockerfile
 FROM $BASE_CONTAINER
 ENV TZ="Europe/Madrid"
 ENV DEBIAN_FRONTEND=noninteractive
-COPY 'output/${DISTRO}/quickinstall/prerequisites.sh' '/prerequisites.sh'
-COPY 'output/${DISTRO}/quickinstall.sh' '/install.sh'
-COPY 'tmp/entrypoint.sh' '/entrypoint.sh'
-CMD ["sh", "-e", "/entrypoint.sh"]
+ADD output/quickinstall /quickinstall
+WORKDIR /quickinstall
+CMD ["sh", "-e", "install.sh"]
 EOF
 
   docker build -t "babelfish:$DISTRO" -f tmp/Dockerfile . 
@@ -103,22 +106,24 @@ EOF
 
 rm -rf output
 mkdir output
+mkdir output/quickinstall
+mkdir output/quickinstall/prerequisites
 find distros -mindepth 1 -maxdepth 1 -printf "%f\n" | while read -r distro
 do 
   echo "Building docker image for $distro"
 
   mkdir "output/$distro"
 
+  DISTRO_ID=$(get_distro_id "$distro")
   if build_docker "$distro"
   then
     echo "Testing extension creation for $distro"
     if test_create_extension "$distro" > "output/$distro/$distro.out" 2>&1
-    then 
+    then
+      generate_quickinstall_script "$distro" "$DISTRO_ID" 
       if [ "$TEST_QUICK_INSTALL" = "true" ]
       then
-       
-        generate_quickinstall_script "$distro"
-        build_quickstart_container "$distro" > /dev/null 2>&1
+        build_quickstart_container "$distro" "$DISTRO_ID" > /dev/null 2>&1
         echo "Testing quick install script for $distro"
         if run_quickstart_container "$distro" > "output/$distro/$distro.out" 2>&1
         then 
@@ -129,6 +134,7 @@ do
           add_to_report "$distro" "QUICK INSTALL FAILED"
         fi  
       else 
+        echo "Skipping testing of quickinstall scripts for $distro"
         add_to_report "$distro" "OK"
         echo "Generating installation documentation for $distro"
         python doc-templater.py "$distro"
