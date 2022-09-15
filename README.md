@@ -1,5 +1,9 @@
 # babelfish_install_tests
 
+[DEPRECATED]
+
+See [install_tests branch in babelfish-for-postgresql fork](https://github.com/ongres/babelfish-for-postgresql/tree/install_tests).
+
 Repo for testing installation procedure in different OS.
 
 ## Howto
